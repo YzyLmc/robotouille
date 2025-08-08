@@ -1,6 +1,7 @@
 import hydra
 import os
 import json
+import string
 
 from omegaconf import DictConfig, OmegaConf
 
@@ -93,7 +94,7 @@ def run_robotouille(environment_name: str, agent_name: str, **kwargs: Dict[str, 
     queued_actions = []
     stochastic_done = False
     while not done and not agent_done_cond(agent) and steps < max_steps:
-        render_img(env, env.current_state)
+        
         img = env.render(render_mode)
         if record:
             imgs.append(img)
@@ -104,6 +105,7 @@ def run_robotouille(environment_name: str, agent_name: str, **kwargs: Dict[str, 
             if proposed_actions: 
                 print(proposed_actions)
                 print('state', env.current_state.predicates)
+                render_img(env, env.current_state)
             if len(proposed_actions) == 0:
                 # Reprompt agent for action(s)
                 continue
@@ -157,9 +159,9 @@ def render_img(env: RobotouilleEnv, state: State):
     '''
     name_to_img = {
             'topbun':
-            mpimg.imread("predicators/envs/assets/imgs/top_bun.png"),
+            mpimg.imread(utils_temp.get_env_asset_path("imgs/top_bun.png")),
             'bottombun':
-            mpimg.imread("predicators/envs/assets/imgs/bottom_bun.png"),
+            mpimg.imread(utils_temp.get_env_asset_path("imgs/bottom_bun.png")),
             'cheese':
             mpimg.imread(utils_temp.get_env_asset_path("imgs/cheese.png")),
             'lettuce':
@@ -168,10 +170,10 @@ def render_img(env: RobotouilleEnv, state: State):
             mpimg.imread(utils_temp.get_env_asset_path("imgs/cut_lettuce.png")),
             'patty':
             mpimg.imread(
-                utils_temp.get_env_asset_path("imgs/realistic_raw_patty_full.png")),
+                utils_temp.get_env_asset_path("imgs/realistic_patty_full.png")),
             'patty_cooked':
             mpimg.imread(
-                utils_temp.get_env_asset_path("imgs/realistic_raw_patty_full.png"))
+                utils_temp.get_env_asset_path("imgs/realistic_patty_full_cooked.png"))
         }
     cut_items = []
     cooked_items = []
@@ -239,9 +241,9 @@ def render_img(env: RobotouilleEnv, state: State):
                 held_item_name = literal.params[1].name
 
             # store cut item and cooked item
-            if is_true and literal.name == "iscooked" and literal.params[0].name == player.name:
+            if is_true and literal.name == "iscooked":
                 cooked_items.append(literal.params[0].name)
-            if is_true and literal.name == "iscut" and literal.params[0].name == player.name:
+            if is_true and literal.name == "iscut":
                 cut_items.append(literal.params[0].name)
 
         # Plot grill, cutting board
@@ -271,18 +273,18 @@ def render_img(env: RobotouilleEnv, state: State):
                                             alpha=0.5,
                                             boxstyle="square,pad=0.0"))
         # Plot items                   
-        held_img_size = (0.3, 0.3)
+        held_img_size = (0.6, 0.6)
         img_size = (0.7, 0.7)
-        offset = held_img_size[1] * (1 / 3)
+        offset = held_img_size[1] * (1 / 2)
         
         ## Held item if any
         if held_item_name:
             if 'patty' in held_item_name:
                 img = name_to_img['patty_cooked'] if held_item_name in cooked_items else name_to_img['patty']
             elif 'lettuce' in held_item_name:
-                img = name_to_img['lettuce_cut'] if held_item_name in cooked_items else name_to_img['lettuce']
+                img = name_to_img['lettuce_cut'] if held_item_name in cut_items else name_to_img['lettuce']
             else:
-                img = name_to_img[held_item_name][:-1]
+                img = name_to_img[held_item_name.rstrip(string.digits)]
             x, y = player_pos
             x, y = x, num_rows - y -1
             extent = [
