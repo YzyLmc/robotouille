@@ -218,7 +218,51 @@ def render_img(env: RobotouilleEnv, state: State):
         #         held_item_name = literal.params[1].name
         # if held_item_name:
         #     self._draw_item_image(surface, held_item_name, obs, player_pos * self.pix_square_size)
+
+        # Plot grill, cutting board
+        for i, row in enumerate(layout):
+            for j, col in enumerate(row):
+                if col is not None:
+                    draw = False
+                    if 'stove' in col:
+                        img = mpimg.imread(utils_temp.get_env_asset_path("imgs/grill.png"))
+                        draw = True
+                    if 'board' in col:
+                        img = mpimg.imread(utils_temp.get_env_asset_path("imgs/cutting_board.png"))
+                        draw = True
+                    
+                    if draw:
+                        ax.imshow(img, extent=[x, x + 1, num_cols - y, num_cols - y + 1])
+                        if True:
+                            ax.text(x + 1 / 2,
+                                    y + (1 - img_size[1]) / 2,
+                                    col,
+                                    fontsize=fontsize,
+                                    color="red",
+                                    ha="center",
+                                    va="top",
+                                    bbox=dict(facecolor="black",
+                                            alpha=0.5,
+                                            boxstyle="square,pad=0.0"))
+        # Plot items                   
+        # type_to_img = {
+        #     self._top_bun_type:
+        #     mpimg.imread("predicators/envs/assets/imgs/top_bun.png"),
+        #     self._bottom_bun_type:
+        #     mpimg.imread("predicators/envs/assets/imgs/bottom_bun.png"),
+        #     self._cheese_type:
+        #     mpimg.imread("predicators/envs/assets/imgs/cheese.png"),
+        #     self._tomato_type:
+        #     mpimg.imread(utils.get_env_asset_path("imgs/uncut_lettuce.png")),
+        #     self._patty_type:
+        #     mpimg.imread(
+        #         utils.get_env_asset_path("imgs/realistic_raw_patty_full.png"))
+        # }
+        held_img_size = (0.3, 0.3)
+        offset = held_img_size[1] * (1 / 3)
+
     
+        # Draw background
         floor_img = mpimg.imread(
             utils_temp.get_env_asset_path("imgs/floorwood.png"))
         for y in range(num_rows):
