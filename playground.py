@@ -192,7 +192,7 @@ def render_img(env: RobotouilleEnv, state: State):
                 env.renderer.canvas.player_pose[player.name] = {"position": player_pos, "direction": player_direction}
 
                 x, y = player_pos
-                y = num_rows - y # NOTE: y-axis is flipped in matplotlib for everything
+                x, y = x, num_rows - y -1 # NOTE: y-axis is flipped in matplotlib for everything
                 robot_img = mpimg.imread(
                     utils_temp.get_env_asset_path(f"imgs/robot_{vec2dir[player_direction]}.png"))
                 img_size = (0.7, 0.7)
@@ -224,6 +224,7 @@ def render_img(env: RobotouilleEnv, state: State):
             for j, col in enumerate(row):
                 if col is not None:
                     draw = False
+                    x, y = j, num_rows - i - 1
                     if 'stove' in col:
                         img = mpimg.imread(utils_temp.get_env_asset_path("imgs/grill.png"))
                         draw = True
@@ -232,7 +233,7 @@ def render_img(env: RobotouilleEnv, state: State):
                         draw = True
                     
                     if draw:
-                        ax.imshow(img, extent=[x, x + 1, num_cols - y, num_cols - y + 1])
+                        ax.imshow(img, extent=[x, x + 1, y, y + 1])
                         if True:
                             ax.text(x + 1 / 2,
                                     y + (1 - img_size[1]) / 2,
