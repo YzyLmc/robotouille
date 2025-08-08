@@ -6,13 +6,20 @@ from omegaconf import DictConfig, OmegaConf
 
 import math
 import pygame
-from typing import Dict, Any
+from typing import Dict, Any, List
 import random
+import matplotlib.pyplot as plt
+import matplotlib.image as mpimg
+from collections import defaultdict
 
 from agents import NAME_TO_AGENT
 
 from utils.video_recorder import record_video
 from robotouille.robotouille_env import create_robotouille_env
+from robotouille.env import RobotouilleEnv
+from backend.state import State
+from backend.object import Object
+import utils
 
 # from robotouille.robotouille_simulator import run_robotouille
 
@@ -105,6 +112,7 @@ def run_robotouille(environment_name: str, agent_name: str, **kwargs: Dict[str, 
             action, param_arg_dict = queued_actions.pop(0)
         
         # Assign action to players
+        # We only have one player
         actions = []
         current_state = env.current_state
         print(current_state.get_valid_actions_and_str())
@@ -141,6 +149,78 @@ def run_robotouille(environment_name: str, agent_name: str, **kwargs: Dict[str, 
         record_video(imgs, filename, fourcc_str, fps)
     
     return done, steps
+
+def render_img(env: RobotouilleEnv, state: State):
+    '''
+    Rendering function separated from qt interface
+    '''
+    layout = env.renderer.layout
+    num_cols, num_rows = len(layout[0]), len(layout)
+    figsize = (num_cols * 2, num_rows * 2)
+
+    fig, ax = plt.subplots(1, 1, figsize=figsize, dpi=216)
+    fontsize = 14
+
+    # Plot vertical lines
+    for i in range(num_cols + 1):
+        ax.axvline(x=i, color="k", linestyle="-")
+
+    # Plot horizontal lines
+    for i in range(num_rows + 1):
+        ax.axhline(y=i, color="k", linestyle="-")
+
+    # Plot robot
+    player_pose = defaultdict(dict) # store the location and directions just in case
+    vec2dir = {
+        (-1, 0): "left",
+        (1, 0): "right",
+        (0, 1): "up",
+        (0, -1): "down"
+    }
+
+    players: list[Object] = state.get_players()
+    for player in players:
+        player_pos = None
+        held_item_name = None
+        for literal, is_true in state.predicates.items():
+            if is_true and literal.name == "loc" and literal.params[0].name == player.name:
+                player_station = literal.params[1].name
+                station_pos = env.canvas._get_station_position(player_station)
+                player_pos = player_pose[player.name]["position"]
+                player_pos, player_direction = env.canvas._move_player_to_station(player_pos, tuple(station_pos), layout)
+                player_pose[player.name] = {"position": player_pos, "direction": player_direction}
+
+                # TODO: replace this with the predicator version
+                x, y = player_pos
+                robot_img = mpimg.imread(
+                    utils.get_env_asset_path(f"imgs/robot_{vec2dir[player_direction]}.png"))
+                img_size = (0.7, 0.7)
+                ax.imshow(robot_img,
+                        extent=[
+                            x + (1 - img_size[0]) / 2, x + (1 + img_size[0]) / 2,
+                            y + (1 - img_size[1]) / 2, y + (1 + img_size[1]) / 2
+                        ])
+                if True: # captions underneath
+                    ax.text(x + 1 / 2,
+                            y + (1 - img_size[1]) / 2,
+                            player.name,
+                            fontsize=fontsize,
+                            color="red",
+                            ha="center",
+                            va="top",
+                            bbox=dict(facecolor="black",
+                                    alpha=0.5,
+                                    boxstyle="square,pad=0.0"))
+        #     # draw item on robot if holding any
+        #     if is_true and literal.name == "has_item" and literal.params[0].name == player.name:
+        #         player_pos = self.player_pose[player.name]["position"]
+        #         held_item_name = literal.params[1].name
+        # if held_item_name:
+        #     self._draw_item_image(surface, held_item_name, obs, player_pos * self.pix_square_size)
+    
+    plt.savefig("my_plot.png")
+
+
 
 @hydra.main(version_base=None, config_path="conf", config_name="config")
 def main(cfg: DictConfig) -> None:
