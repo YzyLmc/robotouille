@@ -155,6 +155,27 @@ def render_img(env: RobotouilleEnv, state: State):
     '''
     Rendering function separated from qt interface
     '''
+    name_to_img = {
+            'topbun':
+            mpimg.imread("predicators/envs/assets/imgs/top_bun.png"),
+            'bottombun':
+            mpimg.imread("predicators/envs/assets/imgs/bottom_bun.png"),
+            'cheese':
+            mpimg.imread(utils_temp.get_env_asset_path("imgs/cheese.png")),
+            'lettuce':
+            mpimg.imread(utils_temp.get_env_asset_path("imgs/uncut_lettuce.png")),
+            'lettuce_cut':
+            mpimg.imread(utils_temp.get_env_asset_path("imgs/cut_lettuce.png")),
+            'patty':
+            mpimg.imread(
+                utils_temp.get_env_asset_path("imgs/realistic_raw_patty_full.png")),
+            'patty_cooked':
+            mpimg.imread(
+                utils_temp.get_env_asset_path("imgs/realistic_raw_patty_full.png"))
+        }
+    cut_items = []
+    cooked_items = []
+
     layout = env.renderer.layout
     num_cols, num_rows = len(layout[0]), len(layout)
     figsize = (num_cols * 2, num_rows * 2)
@@ -212,12 +233,16 @@ def render_img(env: RobotouilleEnv, state: State):
                             bbox=dict(facecolor="black",
                                     alpha=0.5,
                                     boxstyle="square,pad=0.0"))
-        #     # draw item on robot if holding any
-        #     if is_true and literal.name == "has_item" and literal.params[0].name == player.name:
-        #         player_pos = self.player_pose[player.name]["position"]
-        #         held_item_name = literal.params[1].name
-        # if held_item_name:
-        #     self._draw_item_image(surface, held_item_name, obs, player_pos * self.pix_square_size)
+            # store the name item on robot if holding any
+            if is_true and literal.name == "has_item" and literal.params[0].name == player.name:
+                # player_pos = self.player_pose[player.name]["position"]
+                held_item_name = literal.params[1].name
+
+            # store cut item and cooked item
+            if is_true and literal.name == "iscooked" and literal.params[0].name == player.name:
+                cooked_items.append(literal.params[0].name)
+            if is_true and literal.name == "iscut" and literal.params[0].name == player.name:
+                cut_items.append(literal.params[0].name)
 
         # Plot grill, cutting board
         for i, row in enumerate(layout):
@@ -246,22 +271,26 @@ def render_img(env: RobotouilleEnv, state: State):
                                             alpha=0.5,
                                             boxstyle="square,pad=0.0"))
         # Plot items                   
-        # type_to_img = {
-        #     self._top_bun_type:
-        #     mpimg.imread("predicators/envs/assets/imgs/top_bun.png"),
-        #     self._bottom_bun_type:
-        #     mpimg.imread("predicators/envs/assets/imgs/bottom_bun.png"),
-        #     self._cheese_type:
-        #     mpimg.imread("predicators/envs/assets/imgs/cheese.png"),
-        #     self._tomato_type:
-        #     mpimg.imread(utils.get_env_asset_path("imgs/uncut_lettuce.png")),
-        #     self._patty_type:
-        #     mpimg.imread(
-        #         utils.get_env_asset_path("imgs/realistic_raw_patty_full.png"))
-        # }
         held_img_size = (0.3, 0.3)
+        img_size = (0.7, 0.7)
         offset = held_img_size[1] * (1 / 3)
-
+        
+        ## Held item if any
+        if held_item_name:
+            if 'patty' in held_item_name:
+                img = name_to_img['patty_cooked'] if held_item_name in cooked_items else name_to_img['patty']
+            elif 'lettuce' in held_item_name:
+                img = name_to_img['lettuce_cut'] if held_item_name in cooked_items else name_to_img['lettuce']
+            else:
+                img = name_to_img[held_item_name][:-1]
+            x, y = player_pos
+            x, y = x, num_rows - y -1
+            extent = [
+                x + (1 - held_img_size[0]) * (1 / 2),
+                x + (1 + held_img_size[0]) * (1 / 2), y + offset,
+                y + held_img_size[1] + offset
+            ]
+            ax.imshow(img, extent=extent)
     
         # Draw background
         floor_img = mpimg.imread(
