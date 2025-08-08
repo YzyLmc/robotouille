@@ -19,7 +19,7 @@ from robotouille.robotouille_env import create_robotouille_env
 from robotouille.env import RobotouilleEnv
 from backend.state import State
 from backend.object import Object
-import utils
+import utils_temp
 
 # from robotouille.robotouille_simulator import run_robotouille
 
@@ -93,6 +93,7 @@ def run_robotouille(environment_name: str, agent_name: str, **kwargs: Dict[str, 
     queued_actions = []
     stochastic_done = False
     while not done and not agent_done_cond(agent) and steps < max_steps:
+        render_img(env, env.current_state)
         img = env.render(render_mode)
         if record:
             imgs.append(img)
@@ -170,7 +171,7 @@ def render_img(env: RobotouilleEnv, state: State):
         ax.axhline(y=i, color="k", linestyle="-")
 
     # Plot robot
-    player_pose = defaultdict(dict) # store the location and directions just in case
+    # player_pose = defaultdict(dict) # store the location and directions just in case
     vec2dir = {
         (-1, 0): "left",
         (1, 0): "right",
@@ -185,15 +186,15 @@ def render_img(env: RobotouilleEnv, state: State):
         for literal, is_true in state.predicates.items():
             if is_true and literal.name == "loc" and literal.params[0].name == player.name:
                 player_station = literal.params[1].name
-                station_pos = env.canvas._get_station_position(player_station)
-                player_pos = player_pose[player.name]["position"]
-                player_pos, player_direction = env.canvas._move_player_to_station(player_pos, tuple(station_pos), layout)
-                player_pose[player.name] = {"position": player_pos, "direction": player_direction}
+                station_pos = env.renderer.canvas._get_station_position(player_station)
+                player_pos = env.renderer.canvas.player_pose[player.name]["position"]
+                player_pos, player_direction = env.renderer.canvas._move_player_to_station(player_pos, tuple(station_pos), layout)
+                env.renderer.canvas.player_pose[player.name] = {"position": player_pos, "direction": player_direction}
 
-                # TODO: replace this with the predicator version
                 x, y = player_pos
+                y = num_rows - y # NOTE: y-axis is flipped in matplotlib for everything
                 robot_img = mpimg.imread(
-                    utils.get_env_asset_path(f"imgs/robot_{vec2dir[player_direction]}.png"))
+                    utils_temp.get_env_asset_path(f"imgs/robot_{vec2dir[player_direction]}.png"))
                 img_size = (0.7, 0.7)
                 ax.imshow(robot_img,
                         extent=[
@@ -218,6 +219,17 @@ def render_img(env: RobotouilleEnv, state: State):
         # if held_item_name:
         #     self._draw_item_image(surface, held_item_name, obs, player_pos * self.pix_square_size)
     
+        floor_img = mpimg.imread(
+            utils_temp.get_env_asset_path("imgs/floorwood.png"))
+        for y in range(num_rows):
+            for x in range(num_cols):
+                ax.imshow(floor_img, extent=[x, x + 1, y, y + 1], zorder=-1)
+
+        ax.set_xlim(0, num_cols)
+        ax.set_ylim(0, num_rows)
+        ax.set_aspect("equal")
+        ax.axis("off")
+        plt.tight_layout()
     plt.savefig("my_plot.png")
 
 
