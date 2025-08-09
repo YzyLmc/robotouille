@@ -293,6 +293,43 @@ def render_img(env: RobotouilleEnv, state: State):
                 y + held_img_size[1] + offset
             ]
             ax.imshow(img, extent=extent)
+            if True:
+                # If the robot is on the right edge, put text labels for
+                # held items on the left side so that they don't extend past
+                # the edge of the grid and make the image larger.
+                if x == num_cols - 1:
+                    horizontal_align = "right"
+                    text_x = x + (1 - held_img_size[0]) * (1 / 2)
+                else:
+                    horizontal_align = "left"
+                    text_x = x + (1 + held_img_size[0]) * (1 / 2)
+                ax.text(text_x,
+                        y + offset + held_img_size[1] / 2,
+                        held_item_name,
+                        fontsize=fontsize,
+                        color="red",
+                        ha=horizontal_align,
+                        va="top",
+                        bbox=dict(facecolor="black",
+                                alpha=0.5,
+                                boxstyle="square,pad=0.0"))
+
+        ## Calculate item stacks
+        stack_list = [] # In the form (x, y) such that x is stacked on y
+        stack_number = {} # Stores the item item and current stack number
+
+        for literal, is_true in state.predicates.items():
+            if is_true and literal.name == "item_on":
+                item = literal.params[0].name
+                stack_number[item] = 1
+                item_station = literal.params[1].name
+                pos = env.renderer.canvas._get_station_position(item_station)
+                # Place the item slightly above the station
+                # pos[1] -= station_item_offset 
+
+            if is_true and literal.name == 'atop':
+                stack = (literal.params[0].name, literal.params[1].name)
+                stack_list.append(stack)
     
         # Draw background
         floor_img = mpimg.imread(
