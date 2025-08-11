@@ -275,10 +275,10 @@ def render_img(env: RobotouilleEnv, state: State):
         # Plot items                   
         held_img_size = (0.6, 0.6)
         img_size = (0.7, 0.7)
-        offset = held_img_size[1] * (1 / 2)
         
         ## Held item if any
         if held_item_name:
+            offset = held_img_size[1] * (1 / 2)
             if 'patty' in held_item_name:
                 img = name_to_img['patty_cooked'] if held_item_name in cooked_items else name_to_img['patty']
             elif 'lettuce' in held_item_name:
@@ -319,17 +319,50 @@ def render_img(env: RobotouilleEnv, state: State):
         stack_number = {} # Stores the item item and current stack number
 
         for literal, is_true in state.predicates.items():
-            if is_true and literal.name == "item_on":
+            if is_true and literal.name == "item_on": # On top of a station
                 item = literal.params[0].name
                 stack_number[item] = 1
                 item_station = literal.params[1].name
-                pos = env.renderer.canvas._get_station_position(item_station)
+                x, y = env.renderer.canvas._get_station_position(item_station)
+                x, y = x, num_rows - y -1
                 # Place the item slightly above the station
                 # pos[1] -= station_item_offset 
 
-            if is_true and literal.name == 'atop':
+                extent = [
+                    x + (1 - img_size[0]) * (1 / 2),
+                    x + (1 + img_size[0]) * (1 / 2), y + (1 - img_size[1]) / 2,
+                    y + (1 + img_size[1]) / 2
+                ]
+
+                ax.imshow(img, extent=extent, zorder=stack_number[item])
+
+            if is_true and literal.name == 'atop': # On top of an item
                 stack = (literal.params[0].name, literal.params[1].name)
                 stack_list.append(stack)
+
+        # Add stacked items
+        while len(stack_list) > 0:
+            i = 0
+            while i < len(stack_list):
+                item_above, item_below = stack_list[i]
+                if item_below in stack_number:
+                    stack_list.remove(stack_list[i])
+                    stack_number[item_above] = stack_number[item_below] + 1
+                    # Get location of station
+                    for literal, is_true in state.predicates.items():
+                        if is_true and literal.name == "item_at" and literal.params[0].name == item_below:
+                            station_pos = env.renderer.canvas._get_station_position(literal.params[1].name)
+                            offset = 0.1 * stack_number[item_above]
+                            extent = [
+                                x + (1 - img_size[0]) * (1 / 2),
+                                x + (1 + img_size[0]) * (1 / 2),
+                                y + (1 - img_size[1]) / 2 + offset,
+                                y + (1 + img_size[1]) / 2 + offset
+                            ]
+                            ax.imshow(img, extent=extent, zorder=stack_number[item])
+                            break
+                else:
+                    i += 1
     
         # Draw background
         floor_img = mpimg.imread(
