@@ -175,6 +175,16 @@ def render_img(env: RobotouilleEnv, state: State):
             mpimg.imread(
                 utils_temp.get_env_asset_path("imgs/realistic_patty_full_cooked.png"))
         }
+    
+    def get_item_from_name(item_name):
+        if 'patty' in item_name:
+            img = name_to_img['patty_cooked'] if item_name in cooked_items else name_to_img['patty']
+        elif 'lettuce' in item_name:
+            img = name_to_img['lettuce_cut'] if item_name in cut_items else name_to_img['lettuce']
+        else:
+            img = name_to_img[item_name.rstrip(string.digits)]
+        return img
+    
     cut_items = []
     cooked_items = []
 
@@ -279,12 +289,7 @@ def render_img(env: RobotouilleEnv, state: State):
         ## Held item if any
         if held_item_name:
             offset = held_img_size[1] * (1 / 2)
-            if 'patty' in held_item_name:
-                img = name_to_img['patty_cooked'] if held_item_name in cooked_items else name_to_img['patty']
-            elif 'lettuce' in held_item_name:
-                img = name_to_img['lettuce_cut'] if held_item_name in cut_items else name_to_img['lettuce']
-            else:
-                img = name_to_img[held_item_name.rstrip(string.digits)]
+            img = get_item_from_name(held_item_name)
             x, y = player_pos
             x, y = x, num_rows - y -1
             extent = [
@@ -317,24 +322,25 @@ def render_img(env: RobotouilleEnv, state: State):
         ## Calculate item stacks
         stack_list = [] # In the form (x, y) such that x is stacked on y
         stack_number = {} # Stores the item item and current stack number
+        item_station = {}
 
         for literal, is_true in state.predicates.items():
             if is_true and literal.name == "item_on": # On top of a station
-                item = literal.params[0].name
-                stack_number[item] = 1
-                item_station = literal.params[1].name
-                x, y = env.renderer.canvas._get_station_position(item_station)
+                item_name = literal.params[0].name
+                stack_number[item_name] = 1
+                item_station[item_name] = literal.params[1].name
+                x, y = env.renderer.canvas._get_station_position(item_station[item_name])
                 x, y = x, num_rows - y -1
                 # Place the item slightly above the station
-                # pos[1] -= station_item_offset 
 
                 extent = [
                     x + (1 - img_size[0]) * (1 / 2),
                     x + (1 + img_size[0]) * (1 / 2), y + (1 - img_size[1]) / 2,
                     y + (1 + img_size[1]) / 2
                 ]
-
-                ax.imshow(img, extent=extent, zorder=stack_number[item])
+                
+                img = get_item_from_name(item_name)
+                ax.imshow(img, extent=extent, zorder=stack_number[item_name])
 
             if is_true and literal.name == 'atop': # On top of an item
                 stack = (literal.params[0].name, literal.params[1].name)
@@ -348,10 +354,13 @@ def render_img(env: RobotouilleEnv, state: State):
                 if item_below in stack_number:
                     stack_list.remove(stack_list[i])
                     stack_number[item_above] = stack_number[item_below] + 1
+                    item_station[item_above] = item_station[item_below]
                     # Get location of station
                     for literal, is_true in state.predicates.items():
-                        if is_true and literal.name == "item_at" and literal.params[0].name == item_below:
-                            station_pos = env.renderer.canvas._get_station_position(literal.params[1].name)
+                        if is_true and literal.name == "atop" and literal.params[0].name == item_above:
+                            station_pos = env.renderer.canvas._get_station_position(item_station[item_below])
+                            x, y = station_pos[0], station_pos[1]
+                            x, y = x, num_rows - y -1
                             offset = 0.1 * stack_number[item_above]
                             extent = [
                                 x + (1 - img_size[0]) * (1 / 2),
@@ -359,7 +368,8 @@ def render_img(env: RobotouilleEnv, state: State):
                                 y + (1 - img_size[1]) / 2 + offset,
                                 y + (1 + img_size[1]) / 2 + offset
                             ]
-                            ax.imshow(img, extent=extent, zorder=stack_number[item])
+                            img = get_item_from_name(item_above)
+                            ax.imshow(img, extent=extent, zorder=stack_number[item_above])
                             break
                 else:
                     i += 1
