@@ -319,7 +319,7 @@ def render_img(env: RobotouilleEnv, state: State):
                                 alpha=0.5,
                                 boxstyle="square,pad=0.0"))
 
-        ## Calculate item stacks
+            # Calculate item stacks
         stack_list = [] # In the form (x, y) such that x is stacked on y
         stack_number = {} # Stores the item item and current stack number
         item_station = {}
@@ -346,7 +346,7 @@ def render_img(env: RobotouilleEnv, state: State):
                 stack = (literal.params[0].name, literal.params[1].name)
                 stack_list.append(stack)
 
-        # Add stacked items
+            # Add stacked items
         while len(stack_list) > 0:
             i = 0
             while i < len(stack_list):
@@ -360,7 +360,7 @@ def render_img(env: RobotouilleEnv, state: State):
                         if is_true and literal.name == "atop" and literal.params[0].name == item_above:
                             station_pos = env.renderer.canvas._get_station_position(item_station[item_below])
                             x, y = station_pos[0], station_pos[1]
-                            x, y = x, num_rows - y -1
+                            x, y = x, num_rows - y - 1
                             offset = 0.1 * stack_number[item_above]
                             extent = [
                                 x + (1 - img_size[0]) * (1 / 2),
@@ -370,6 +370,49 @@ def render_img(env: RobotouilleEnv, state: State):
                             ]
                             img = get_item_from_name(item_above)
                             ax.imshow(img, extent=extent, zorder=stack_number[item_above])
+
+                            # Labeling
+                            if True:
+                                stack_i = {it:s for it, s in item_station.items() if s == item_station[item_above]}
+                                # On cuttingboard or grill, place item label on top
+                                if "stove" in item_station[item_name] or "board" in item_station[item_name]:
+                                    # Nothing on top
+                                    if len(stack_i) == 1:
+                                        ax.text(x,
+                                            y + (0.1 * stack_number[item_above]) + (1 - img_size[1]) / 2,
+                                            item_above,
+                                            fontsize=fontsize,
+                                            color="red",
+                                            ha="left",
+                                            va="top",
+                                            bbox=dict(facecolor="black",
+                                                    alpha=0.5,
+                                                    boxstyle="square,pad=0.0"))
+                                    # More than 1 item in the stack
+                                    else:
+                                        ax.text(x,
+                                            y + (1 - img_size[1]) / 2,
+                                            item_above,
+                                            fontsize=fontsize,
+                                            color="red",
+                                            ha="left",
+                                            va="top",
+                                            bbox=dict(facecolor="black",
+                                                    alpha=0.5,
+                                                    boxstyle="square,pad=0.0"))
+                                # No station below, place item label underneath
+                                else:
+                                    ax.text(x + 1 / 2,
+                                                    y + (1 + img_size[1]) / 2,
+                                                    item_name,
+                                                    fontsize=fontsize,
+                                                    color="red",
+                                                    ha="center",
+                                                    va="bottom",
+                                                    bbox=dict(facecolor="black",
+                                                            alpha=0.5,
+                                                            boxstyle="square,pad=0.0"))
+
                             break
                 else:
                     i += 1
