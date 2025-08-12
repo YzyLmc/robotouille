@@ -371,52 +371,73 @@ def render_img(env: RobotouilleEnv, state: State):
                             img = get_item_from_name(item_above)
                             ax.imshow(img, extent=extent, zorder=stack_number[item_above])
 
-                            # Labeling
-                            if True:
-                                stack_i = {it:s for it, s in item_station.items() if s == item_station[item_above]}
-                                # On cuttingboard or grill, place item label on top
-                                if "stove" in item_station[item_name] or "board" in item_station[item_name]:
-                                    # Nothing on top
-                                    if len(stack_i) == 1:
-                                        ax.text(x,
-                                            y + (0.1 * stack_number[item_above]) + (1 - img_size[1]) / 2,
-                                            item_above,
-                                            fontsize=fontsize,
-                                            color="red",
-                                            ha="left",
-                                            va="top",
-                                            bbox=dict(facecolor="black",
-                                                    alpha=0.5,
-                                                    boxstyle="square,pad=0.0"))
-                                    # More than 1 item in the stack
-                                    else:
-                                        ax.text(x,
-                                            y + (1 - img_size[1]) / 2,
-                                            item_above,
-                                            fontsize=fontsize,
-                                            color="red",
-                                            ha="left",
-                                            va="top",
-                                            bbox=dict(facecolor="black",
-                                                    alpha=0.5,
-                                                    boxstyle="square,pad=0.0"))
-                                # No station below, place item label underneath
-                                else:
-                                    ax.text(x + 1 / 2,
-                                                    y + (1 + img_size[1]) / 2,
-                                                    item_name,
-                                                    fontsize=fontsize,
-                                                    color="red",
-                                                    ha="center",
-                                                    va="bottom",
-                                                    bbox=dict(facecolor="black",
-                                                            alpha=0.5,
-                                                            boxstyle="square,pad=0.0"))
-
                             break
                 else:
                     i += 1
-    
+
+        # Labeling
+        if True:
+            print(stack_number)
+            for item_name in stack_number:
+                stack_i = {it:s for it, s in item_station.items() if s == item_station[item_name]}
+                print(stack_i)
+                station_pos = env.renderer.canvas._get_station_position(item_station[item_name])
+                x, y = station_pos[0], station_pos[1]
+                x, y = x, num_rows - y - 1
+                # On cuttingboard or grill, place item label on top
+                if "stove" in item_station[item_name] or "board" in item_station[item_name]:
+                    # Nothing on top
+                    if len(stack_i) == 1: # Table is invisible
+                        print(item_name)
+                        ax.text(x,
+                            y + (1 - img_size[1]) / 2,
+                            item_name,
+                            fontsize=fontsize,
+                            color="red",
+                            ha="center",
+                            va="top",
+                            bbox=dict(facecolor="black",
+                                    alpha=0.5,
+                                    boxstyle="square,pad=0.0"))
+                    # More than 1 item in the stack
+                    else:
+                        ax.text(x,
+                                y + (0.1 * stack_number[item_name]) + (1 - img_size[1]) / 2,
+                                item_name,
+                                fontsize=fontsize,
+                                color="red",
+                                ha="center",
+                                va="top",
+                                bbox=dict(facecolor="black",
+                                        alpha=0.5,
+                                        boxstyle="square,pad=0.0"))
+                # No station below, place item label underneath
+                else:
+                    # Nothing on top or bottom
+                    if len(stack_i) == 1: # table is invisible
+                        ax.text(x + 1 / 2,
+                                        y + (1 + img_size[1]) / 2,
+                                        item_name,
+                                        fontsize=fontsize,
+                                        color="red",
+                                        ha="center",
+                                        va="bottom",
+                                        bbox=dict(facecolor="black",
+                                                alpha=0.5,
+                                                boxstyle="square,pad=0.0"))
+                    else:
+                        ax.text(x,
+                                y + (0.1 * stack_number[item_name]) + (1 - img_size[1]) / 2,
+                                item_name,
+                                fontsize=fontsize,
+                                color="red",
+                                ha="left",
+                                va="bottom",
+                                bbox=dict(facecolor="black",
+                                        alpha=0.5,
+                                        boxstyle="square,pad=0.0"))
+                    
+
         # Draw background
         floor_img = mpimg.imread(
             utils_temp.get_env_asset_path("imgs/floorwood.png"))
