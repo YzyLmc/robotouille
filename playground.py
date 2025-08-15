@@ -5,6 +5,7 @@ import string
 
 from omegaconf import DictConfig, OmegaConf
 
+import time
 import math
 import pygame
 from typing import Dict, Any, List
@@ -150,6 +151,67 @@ def run_robotouille(environment_name: str, agent_name: str, **kwargs: Dict[str, 
         fourcc_str = kwargs.get('fourcc_str', 'avc1')
         fps = kwargs.get('video_fps', 3) # Videos with FPS < 3 on MP4 will appear corrupted (all green)
         record_video(imgs, filename, fourcc_str, fps)
+    
+    return done, steps
+
+def test_roll_out(environment_name: str, agent_name: str, **kwargs: Dict[str, Any]):
+    '''Minimal script for testing action rollout and screen shot'''
+    # Initialize environment
+    seed = kwargs.get('seed', None)
+    noisy_randomization = kwargs.get('noisy_randomization', False)
+    env = create_robotouille_env(environment_name, seed, noisy_randomization)
+    # Initialize agent
+    llm_kwargs = kwargs.get('llm_kwargs', {})
+    agent = NAME_TO_AGENT[agent_name](llm_kwargs)
+    agent_done_cond = lambda a: a.is_done() if a is not None else False
+    agent_retry_cond = lambda a, steps_left: a.is_retry(steps_left) if a is not None else False
+
+    obs, info = env.reset()
+    done = False
+    steps = 0
+    if kwargs.get('max_steps'):
+        max_steps = kwargs.get('max_steps')
+    elif kwargs.get('max_steps_multiplier'):
+        agent = NAME_TO_AGENT['bfs'](None)
+        optimal_plan = agent.propose_actions(obs, env)
+        max_steps = math.ceil(len(optimal_plan) * kwargs.get('max_steps_multiplier'))
+    else:
+        assert False, "Must provide either max_steps or max_steps_multiplier in kwargs"
+    # queued_actions = [
+    #     [(move, {'s1': stove1, 'p1': robot1, 's2': table2})],
+    #     [(pick-up-item, {'i1': lettuce1, 'p1': robot1, 's1': table2})],
+    #     [(move, {'s1': table2, 'p1': robot1, 's2': board1})],
+    #     [(place-item, {'i1': lettuce1, 'p1': robot1, 's1': board1})],
+    # ]
+    queued_actions = []
+    while len(queued_actions) > 0 and steps < max_steps:
+        
+        if len(queued_actions) == 0:
+            # proposed_actions = agent.propose_actions(obs, env)
+            proposed_actions = random.choice(current_state.get_valid_actions_and_str())
+            action, param_arg_dict = proposed_actions[0]
+            queued_actions = proposed_actions[1:]
+        else:
+            action, param_arg_dict = queued_actions.pop(0)
+
+        fig = render_img(env, env.current_state)
+
+        time.sleep(2)
+        
+        # Assign action to players
+        # We only have one player
+        actions = []
+        current_state = env.current_state
+        for player in current_state.get_players():
+            if player == current_state.current_player:
+                actions.append((action, param_arg_dict))
+            else:
+                actions.append((None, None))
+        
+        # Step environment
+        obs, reward, done, info = env.step(actions)
+        
+        steps += 1
     
     return done, steps
 
@@ -451,6 +513,7 @@ def render_img(env: RobotouilleEnv, state: State):
         ax.axis("off")
         plt.tight_layout()
     plt.savefig("my_plot.png")
+    return fig
 
 
 
