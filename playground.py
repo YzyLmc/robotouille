@@ -104,8 +104,8 @@ def run_robotouille(environment_name: str, agent_name: str, **kwargs: Dict[str, 
             # Retrieve action(s) from agent output
             proposed_actions = agent.propose_actions(obs, env)
             if proposed_actions: 
-                print(proposed_actions)
-                print('state', env.current_state.predicates)
+                # print(proposed_actions)
+                # print('state', env.current_state.predicates)
                 render_img(env, env.current_state)
             if len(proposed_actions) == 0:
                 # Reprompt agent for action(s)
@@ -119,7 +119,7 @@ def run_robotouille(environment_name: str, agent_name: str, **kwargs: Dict[str, 
         # We only have one player
         actions = []
         current_state = env.current_state
-        print(current_state.get_valid_actions_and_str())
+        # print(current_state.get_valid_actions_and_str())
         for player in current_state.get_players():
             if player == current_state.current_player:
                 actions.append((action, param_arg_dict))
@@ -184,13 +184,14 @@ def test_roll_out(environment_name: str, agent_name: str, **kwargs: Dict[str, An
     #     [(place-item, {'i1': lettuce1, 'p1': robot1, 's1': board1})],
     # ]
     queued_actions = []
-    while len(queued_actions) > 0 and steps < max_steps:
+    while len(queued_actions) > 0 or steps < max_steps:
         
         if len(queued_actions) == 0:
             # proposed_actions = agent.propose_actions(obs, env)
-            proposed_actions = random.choice(current_state.get_valid_actions_and_str())
-            action, param_arg_dict = proposed_actions[0]
-            queued_actions = proposed_actions[1:]
+            proposed_action = random.choice(env.current_state.get_valid_actions_and_str()[0])
+            print(proposed_action)
+            action, param_arg_dict = proposed_action
+            # queued_actions = proposed_actions[1:]
         else:
             action, param_arg_dict = queued_actions.pop(0)
 
@@ -439,10 +440,9 @@ def render_img(env: RobotouilleEnv, state: State):
 
         # Labeling
         if True:
-            print(stack_number)
             for item_name in stack_number:
                 stack_i = {it:s for it, s in item_station.items() if s == item_station[item_name]}
-                print(stack_i)
+                # print(stack_i)
                 station_pos = env.renderer.canvas._get_station_position(item_station[item_name])
                 x, y = station_pos[0], station_pos[1]
                 x, y = x, num_rows - y - 1
@@ -450,7 +450,7 @@ def render_img(env: RobotouilleEnv, state: State):
                 if "stove" in item_station[item_name] or "board" in item_station[item_name]:
                     # Nothing on top
                     if len(stack_i) == 1: # Table is invisible
-                        print(item_name)
+                        # print(item_name)
                         ax.text(x,
                             y + (1 - img_size[1]) / 2,
                             item_name,
@@ -516,6 +516,14 @@ def render_img(env: RobotouilleEnv, state: State):
     return fig
 
 
+@hydra.main(version_base=None, config_path="conf", config_name="test_config")
+def test_main(cfg: DictConfig) -> None:
+    if not cfg.evaluation.evaluate:
+        kwargs = OmegaConf.to_container(cfg.game, resolve=True)
+        kwargs['llm_kwargs'] = OmegaConf.to_container(cfg.llm, resolve=True)
+        environment_name = kwargs.pop('environment_name')
+        agent_name = kwargs.pop('agent_name')
+        test_roll_out(environment_name, agent_name, **kwargs)
 
 @hydra.main(version_base=None, config_path="conf", config_name="config")
 def main(cfg: DictConfig) -> None:
@@ -529,4 +537,4 @@ def main(cfg: DictConfig) -> None:
     #     evaluate(cfg)
 
 if __name__ == "__main__":
-    main()
+    test_main()
