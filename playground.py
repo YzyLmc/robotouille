@@ -163,8 +163,6 @@ def test_roll_out(environment_name: str, agent_name: str, **kwargs: Dict[str, An
     # Initialize agent
     llm_kwargs = kwargs.get('llm_kwargs', {})
     agent = NAME_TO_AGENT[agent_name](llm_kwargs)
-    agent_done_cond = lambda a: a.is_done() if a is not None else False
-    agent_retry_cond = lambda a, steps_left: a.is_retry(steps_left) if a is not None else False
 
     obs, info = env.reset()
     done = False
@@ -185,7 +183,6 @@ def test_roll_out(environment_name: str, agent_name: str, **kwargs: Dict[str, An
     # ]
     queued_actions = []
     while len(queued_actions) > 0 or steps < max_steps:
-        
         if len(queued_actions) == 0:
             # proposed_actions = agent.propose_actions(obs, env)
             proposed_action = random.choice(env.current_state.get_valid_actions_and_str()[0])
