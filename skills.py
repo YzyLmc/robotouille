@@ -75,6 +75,8 @@ class SkillManager:
         valid_action = [a for a in valid_action if action_str in a[0].name]
         ## Look for valid parameter combinations
         for a in valid_action:
+            if item_station == a[1]["s1"]:
+                return True
             if item_station == a[1]["s2"]:
                 self.env.step([a])
                 return True
@@ -147,7 +149,7 @@ class SkillManager:
         """
         item1_name, item2_name = args
         item1: Object = [i for i in self.objects if item1_name in i.name][0]
-        item2: Object = [i for i in self.objects if item2_name == i.name][0]
+        item2: Object = [i for i in self.objects if item2_name in i.name][0]
         if self.stack_number[item2] < max([self.stack_number[o] for o in self.stack_number if self.item_station[o] == self.item_station[item2]]): # The second item is not on top of the stack
             return False
         if not self.held_item: # No item is not being held
@@ -155,7 +157,7 @@ class SkillManager:
         elif item1 != self.held_item: # The item is not being held by the agent
             return False
 
-        if not self._goto(item2, is_station=True):
+        if not self._goto(item2):
             return False
         action_str = "stack"
         valid_action, _ = self.env.current_state.get_valid_actions_and_str()
@@ -164,7 +166,7 @@ class SkillManager:
             for a in valid_action:
                 if item1 == a[1]["i1"] and item2 == a[1]["i2"]:
                     self.env.step([a])
-                    self.stack_number, self.item_station = self.calculate_item_stack()
+                    self.stack_number, self.item_station, self.held_item = self.calculate_item_stack()
                     return True
         assert False, "Precondition missed edge cases"
     
@@ -184,7 +186,7 @@ class SkillManager:
             return False
         if self.held_item: # Already holding an item
             return False
-        if "cuttingboard" not in self.item_station[item].name: # The item is not on top of the cuttingboard
+        if "board" not in self.item_station[item].name: # The item is not on top of the cuttingboard
             return False
         # The item is not cuttable
         for literal, is_true in self.env.current_state.predicates.items():
@@ -213,10 +215,10 @@ class SkillManager:
         - There is nothing else on top of the item.
         """
         item_name: str = args[0]
-        item: Object = [i for i in self.objects if item_name == i.name][0]
+        item: Object = [i for i in self.objects if item_name in i.name][0]
         if self.stack_number[item] < max([self.stack_number[o] for o in self.stack_number if self.item_station[o] == self.item_station[item]]): # Stack number less than the highest one on the stack
             return False
-        if "board" not in self.item_station[item].name: # The item is not on top of the cuttingboard
+        if "stove" not in self.item_station[item].name: # The item is not on top of the cuttingboard
             return False
         # The item is not cookable
         for literal, is_true in self.env.current_state.predicates.items():
@@ -234,7 +236,7 @@ class SkillManager:
                 if item == a[1]["i1"]:
                     self.env.step([a])
                     # Wait for three timesteps after start cooking
-                    wait = [a for a in self.env.current_state.get_valid_actions_and_str()[0] if a.name == "wait"][0]
+                    wait = [a for a in self.env.current_state.get_valid_actions_and_str()[0] if a[0].name == "wait"][0]
                     for _ in range(3): self.env.step([wait])
                     return True
         assert False, "Precondition missed edge cases"
@@ -279,7 +281,7 @@ def run_skill_sequence_and_record(skill_manager: SkillManager, skill_sequence: l
         skill_manager.execute_skill(skill)
         
     file_name = f"{save_path}/{i+1}.png"
-    render_img(SkillManager.env, SkillManager.env.current_state, file_name)
+    render_img(skill_manager.env, skill_manager.env.current_state, file_name)
 
 def test_roll_out(environment_name: str, **kwargs):
     '''Minimal script for testing action rollout and screen shot'''
@@ -302,7 +304,7 @@ def test_roll_out(environment_name: str, **kwargs):
         "Pick(lettuce)",
         "Stack(lettuce, patty)",
         "Pick(topbun)",
-        "Stack(topbun, patty)"
+        "Stack(topbun, lettuce)"
     ]
     save_path = "test_run/"
     # Run skill sequence
