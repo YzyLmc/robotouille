@@ -13,6 +13,10 @@ from backend.object import Object
 from backend.state import State
 from playground import render_img
 
+import hydra
+from omegaconf import DictConfig, OmegaConf
+from robotouille.robotouille_env import create_robotouille_env
+
 class SkillManager:
     """
     Take in a robotouille env, record the items and their locations (stack order) in the environment.
@@ -32,6 +36,7 @@ class SkillManager:
         stack_list = [] # In the form (x, y) such that x is stacked on y
         stack_number: dict[Object, int] = {} # Stores the item item and current stack number
         item_station: dict[Object, Object] = {}
+        held_item: Object = None
         for literal, is_true in state.predicates.items():
             if is_true and literal.name == "item_on": # On top of a station
                 item = literal.params[0]
@@ -56,13 +61,13 @@ class SkillManager:
 
         return stack_number, item_station, held_item
 
-    def _goto(self, object: Object):
+    def _goto(self, object: Object, is_station:bool=False):
         """
         Go to a location that enables interaction with the object.
         This function is not a skill per se, but is called by other skills
         """
         # Find the object location
-        item_station: Object = self.item_station[object]
+        item_station: Object = self.item_station[object] if not is_station else object
 
         # Find the action from available actions
         action_str = "move"
@@ -71,7 +76,7 @@ class SkillManager:
         ## Look for valid parameter combinations
         for a in valid_action:
             if item_station == a[1]["s2"]:
-                self.env.step(a)
+                self.env.step([a])
                 return True
         assert False, "This should never happen since the agent is free to move to anywhere anytime"
 
@@ -83,9 +88,9 @@ class SkillManager:
         - The item is on top of the stack
         """
         item_name: str = args[0]
-        item: Object = [i for i in self.objects if i.name == item_name][0]
+        item: Object = [i for i in self.objects if item_name in i.name][0]
         # If the object is not on top of the stack, the skill will fail
-        if self.stack_number[item] < max([self.stack_number[o] for o in self.stack_number if self.item_station[o] == self.item_station[item_name]]): # Stack number less than the highest one on the stack
+        if self.stack_number[item] < max([self.stack_number[o] for o in self.stack_number if self.item_station[o] == self.item_station[item]]): # Stack number less than the highest one on the stack
             return False
         if self.held_item: # Already holding an item
             return False
@@ -98,7 +103,7 @@ class SkillManager:
         if valid_action:
             for a in valid_action:
                 if item == a[1]["i1"]:
-                    self.env.step(a)
+                    self.env.step([a])
                     self.stack_number, self.item_station, self.held_item = self.calculate_item_stack()
                     return True
         assert False, "Precondition missed edge cases"
@@ -111,15 +116,16 @@ class SkillManager:
         - The item is being hold by the agent.
         """
         item_name, station_name = args
-        item: Object = [i for i in self.objects if i.name == item_name][0]
-        if [i for i in self.objects if self.item_station[i] == station_name]: # The station is not empty
+        item: Object = [i for i in self.objects if item_name in i.name][0]
+        station: Object = [s for s in self.objects if station_name in s.name][0]
+        if [i for i in self.item_station if station_name == self.item_station[i].name]: # The station is not empty
             return False
         if not self.held_item: # No item is not being held
             return False
         elif item_name not in self.held_item.name: # The item is not being held by the agent
             return False
 
-        if not self._goto(item):
+        if not self._goto(station, is_station=True):
             return False
         action_str = "place-item"
         valid_action, _ = self.env.current_state.get_valid_actions_and_str()
@@ -127,8 +133,8 @@ class SkillManager:
         if valid_action:
             for a in valid_action:
                 if item == a[1]["i1"] and station_name in a[1]["s1"].name:
-                    self.env.step(a)
-                    self.stack_number, self.item_station = self.calculate_item_stack()
+                    self.env.step([a])
+                    self.stack_number, self.item_station, self.held_item = self.calculate_item_stack()
                     return True
         assert False, "Precondition missed edge cases"
     
@@ -140,16 +146,16 @@ class SkillManager:
         - The first item is being held by the agent.
         """
         item1_name, item2_name = args
-        item1: Object = [i for i in self.objects if i.name == item1_name][0]
-        item2: Object = [i for i in self.objects if i.name == item2_name][0]
-        if self.stack_number[item2] < max([self.stack_number[o] for o in self.stack_number if self.item_station[o] == self.item_station[item2_name]]): # The second item is not on top of the stack
+        item1: Object = [i for i in self.objects if item1_name in i.name][0]
+        item2: Object = [i for i in self.objects if item2_name == i.name][0]
+        if self.stack_number[item2] < max([self.stack_number[o] for o in self.stack_number if self.item_station[o] == self.item_station[item2]]): # The second item is not on top of the stack
             return False
         if not self.held_item: # No item is not being held
             return False
         elif item1 != self.held_item: # The item is not being held by the agent
             return False
 
-        if not self._goto(item2):
+        if not self._goto(item2, is_station=True):
             return False
         action_str = "stack"
         valid_action, _ = self.env.current_state.get_valid_actions_and_str()
@@ -157,7 +163,7 @@ class SkillManager:
         if valid_action:
             for a in valid_action:
                 if item1 == a[1]["i1"] and item2 == a[1]["i2"]:
-                    self.env.step(a)
+                    self.env.step([a])
                     self.stack_number, self.item_station = self.calculate_item_stack()
                     return True
         assert False, "Precondition missed edge cases"
@@ -173,8 +179,8 @@ class SkillManager:
         - There is nothing else on top of the item.
         """
         item_name: str = args[0]
-        item: Object = [i for i in self.objects if i.name == item_name][0]
-        if self.stack_number[item] < max([self.stack_number[o] for o in self.stack_number if self.item_station[o] == self.item_station[item_name]]): # Stack number less than the highest one on the stack
+        item: Object = [i for i in self.objects if item_name in i.name][0]
+        if self.stack_number[item] < max([self.stack_number[o] for o in self.stack_number if self.item_station[o] == self.item_station[item]]): # Stack number less than the highest one on the stack
             return False
         if self.held_item: # Already holding an item
             return False
@@ -194,7 +200,7 @@ class SkillManager:
         if valid_action:
             for a in valid_action:
                 if item == a[1]["i1"]:
-                    for _ in range(3):self.env.step(a) # You somehow have to cut it three times
+                    for _ in range(3):self.env.step([a]) # You somehow have to cut it three times
                     return True
         assert False, "Precondition missed edge cases"
 
@@ -207,8 +213,8 @@ class SkillManager:
         - There is nothing else on top of the item.
         """
         item_name: str = args[0]
-        item: Object = [i for i in self.objects if i.name == item_name][0]
-        if self.stack_number[item] < max([self.stack_number[o] for o in self.stack_number if self.item_station[o] == self.item_station[item_name]]): # Stack number less than the highest one on the stack
+        item: Object = [i for i in self.objects if item_name == i.name][0]
+        if self.stack_number[item] < max([self.stack_number[o] for o in self.stack_number if self.item_station[o] == self.item_station[item]]): # Stack number less than the highest one on the stack
             return False
         if "board" not in self.item_station[item].name: # The item is not on top of the cuttingboard
             return False
@@ -226,10 +232,10 @@ class SkillManager:
         if valid_action:
             for a in valid_action:
                 if item == a[1]["i1"]:
-                    self.env.step(a)
+                    self.env.step([a])
                     # Wait for three timesteps after start cooking
                     wait = [a for a in self.env.current_state.get_valid_actions_and_str()[0] if a.name == "wait"][0]
-                    for _ in range(3): self.env.step(wait)
+                    for _ in range(3): self.env.step([wait])
                     return True
         assert False, "Precondition missed edge cases"
 
@@ -262,19 +268,20 @@ def run_skill_sequence_and_record(skill_manager: SkillManager, skill_sequence: l
     Run a skill sequence.
     """
     # Use current time as save path
-    save_path = save_path + str(datetime.datetime.now())
+    time_now = datetime.datetime.now()
+    save_path = save_path + str(time_now.year) + "-" + str(time_now.month) + "-" + str(time_now.day) + "-" + str(time_now.hour) + "-" + str(time_now.minute)
     if not os.path.exists(save_path):
         os.makedirs(save_path)
 
     for i, skill in enumerate(skill_sequence):
         file_name = f"{save_path}/{i}.png"
-        render_img(SkillManager.env, SkillManager.env.current_state, file_name)
+        render_img(skill_manager.env, skill_manager.env.current_state, file_name)
         skill_manager.execute_skill(skill)
         
     file_name = f"{save_path}/{i+1}.png"
     render_img(SkillManager.env, SkillManager.env.current_state, file_name)
 
-def test_roll_out(environment_name: str, **kwargs: dict[str, Any]):
+def test_roll_out(environment_name: str, **kwargs):
     '''Minimal script for testing action rollout and screen shot'''
     # Initialize environment
     seed = kwargs.get('seed', None)
@@ -307,11 +314,7 @@ def main(cfg: DictConfig) -> None:
         kwargs = OmegaConf.to_container(cfg.game, resolve=True)
         kwargs['llm_kwargs'] = OmegaConf.to_container(cfg.llm, resolve=True)
         environment_name = kwargs.pop('environment_name')
-        agent_name = kwargs.pop('agent_name')
-        test_roll_out(environment_name, agent_name, **kwargs)
+        test_roll_out(environment_name, **kwargs)
 
 if __name__ == "__main__":
-    import hydra
-    from omegaconf import DictConfig, OmegaConf
-    from robotouille.robotouille_env import create_robotouille_env
     main()
