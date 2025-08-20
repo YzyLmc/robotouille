@@ -213,7 +213,7 @@ def test_roll_out(environment_name: str, agent_name: str, **kwargs: Dict[str, An
     
     return done, steps
 
-def render_img(env: RobotouilleEnv, state: State):
+def render_img(env: RobotouilleEnv, state: State, file_name=None):
     '''
     Rendering function separated from qt interface
     '''
@@ -509,7 +509,10 @@ def render_img(env: RobotouilleEnv, state: State):
         ax.set_aspect("equal")
         ax.axis("off")
         plt.tight_layout()
-    plt.savefig("my_plot.png")
+    if file_name:
+        plt.savefig(file_name)
+    else:
+        plt.savefig("my_plot.png")
     return fig
 
 

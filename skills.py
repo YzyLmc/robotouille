@@ -5,10 +5,13 @@ Object
 |---item: lettuce1, patty1, etc.
 |---station: cuttingboard1, stove1, etc.
 """
+import datetime
+import os
 
 from robotouille.env import RobotouilleEnv
 from backend.object import Object
 from backend.state import State
+from playground import render_img
 
 class SkillManager:
     """
@@ -169,7 +172,31 @@ class SkillManager:
         - The agent is not holding anything.
         - There is nothing else on top of the item.
         """
-        pass
+        item_name: str = args[0]
+        item: Object = [i for i in self.objects if i.name == item_name][0]
+        if self.stack_number[item] < max([self.stack_number[o] for o in self.stack_number if self.item_station[o] == self.item_station[item_name]]): # Stack number less than the highest one on the stack
+            return False
+        if self.held_item: # Already holding an item
+            return False
+        if "cuttingboard" not in self.item_station[item].name: # The item is not on top of the cuttingboard
+            return False
+        # The item is not cuttable
+        for literal, is_true in self.env.current_state.predicates.items():
+            if literal.params[0] == item and literal.name == "iscuttable":
+                if not is_true:
+                    return False
+        
+        if not self._goto(item):
+            return False
+        action_str = "cut"
+        valid_action, _ = self.env.current_state.get_valid_actions_and_str()
+        valid_action = [a for a in valid_action if action_str in a[0].name]
+        if valid_action:
+            for a in valid_action:
+                if item == a[1]["i1"]:
+                    for _ in range(3):self.env.step(a) # You somehow have to cut it three times
+                    return True
+        assert False, "Precondition missed edge cases"
 
     def Cook(self, args: tuple[str]):
         """
@@ -179,4 +206,112 @@ class SkillManager:
         - The item is cookable.
         - There is nothing else on top of the item.
         """
-        pass
+        item_name: str = args[0]
+        item: Object = [i for i in self.objects if i.name == item_name][0]
+        if self.stack_number[item] < max([self.stack_number[o] for o in self.stack_number if self.item_station[o] == self.item_station[item_name]]): # Stack number less than the highest one on the stack
+            return False
+        if "board" not in self.item_station[item].name: # The item is not on top of the cuttingboard
+            return False
+        # The item is not cookable
+        for literal, is_true in self.env.current_state.predicates.items():
+            if literal.params[0] == item and literal.name == "iscookable":
+                if not is_true:
+                    return False
+                
+        if not self._goto(item):
+            return False
+        action_str = "cook"
+        valid_action, _ = self.env.current_state.get_valid_actions_and_str()
+        valid_action = [a for a in valid_action if action_str in a[0].name]
+        if valid_action:
+            for a in valid_action:
+                if item == a[1]["i1"]:
+                    self.env.step(a)
+                    # Wait for three timesteps after start cooking
+                    wait = [a for a in self.env.current_state.get_valid_actions_and_str()[0] if a.name == "wait"][0]
+                    for _ in range(3): self.env.step(wait)
+                    return True
+        assert False, "Precondition missed edge cases"
+
+    def execute_skill(self, skill: str):
+        """
+        Ground a skill string into actual functions for execution.
+        E.g., "Pick(item1)" will be executed as self.Pick(args=("item1",))
+        """
+        # separate the skill name from the arguments
+        skill, args = skill.split("(")
+        args = args[:-1] # remove the closing parenthesis
+        args = tuple(args.split(', '))
+
+        # execute the skill
+        if skill == "Pick":
+            self.Pick(args)
+        elif skill == "Place":
+            self.Place(args)
+        elif skill == "Stack":
+            self.Stack(args)
+        elif skill == "Cut":
+            self.Cut(args)
+        elif skill == "Cook":
+            self.Cook(args)
+        else:
+            assert False, f"Unknown skill: {skill}"
+
+def run_skill_sequence_and_record(skill_manager: SkillManager, skill_sequence: list[str], save_path: str):
+    """
+    Run a skill sequence.
+    """
+    # Use current time as save path
+    save_path = save_path + str(datetime.datetime.now())
+    if not os.path.exists(save_path):
+        os.makedirs(save_path)
+
+    for i, skill in enumerate(skill_sequence):
+        file_name = f"{save_path}/{i}.png"
+        render_img(SkillManager.env, SkillManager.env.current_state, file_name)
+        skill_manager.execute_skill(skill)
+        
+    file_name = f"{save_path}/{i+1}.png"
+    render_img(SkillManager.env, SkillManager.env.current_state, file_name)
+
+def test_roll_out(environment_name: str, **kwargs: dict[str, Any]):
+    '''Minimal script for testing action rollout and screen shot'''
+    # Initialize environment
+    seed = kwargs.get('seed', None)
+    env = create_robotouille_env(environment_name, seed)
+    obs, info = env.reset()
+
+    # Initialize skill manager
+    skill_manager = SkillManager(env)
+    skill_sequence = [
+        "Pick(lettuce)",
+        "Place(lettuce, board)",
+        "Cut(lettuce)",
+        "Pick(patty)",
+        "Place(patty, stove)",
+        "Cook(patty)",
+        "Pick(patty)",
+        "Stack(patty, bottombun)",
+        "Pick(lettuce)",
+        "Stack(lettuce, patty)",
+        "Pick(topbun)",
+        "Stack(topbun, patty)"
+    ]
+    save_path = "test_run/"
+    # Run skill sequence
+    run_skill_sequence_and_record(skill_manager, skill_sequence, save_path)
+
+@hydra.main(version_base=None, config_path="conf", config_name="test_config")
+def main(cfg: DictConfig) -> None:
+    if not cfg.evaluation.evaluate:
+        kwargs = OmegaConf.to_container(cfg.game, resolve=True)
+        kwargs['llm_kwargs'] = OmegaConf.to_container(cfg.llm, resolve=True)
+        environment_name = kwargs.pop('environment_name')
+        agent_name = kwargs.pop('agent_name')
+        test_roll_out(environment_name, agent_name, **kwargs)
+
+if __name__ == "__main__":
+    import hydra
+    from omegaconf import DictConfig, OmegaConf
+    from robotouille.robotouille_env import create_robotouille_env
+    main()
