@@ -282,11 +282,11 @@ def run_skill_sequence_and_record(skill_manager: SkillManager, skill_sequence: l
     transitions = {}
     transitions[str(0)] = {
         'skill': None,
-        'image': f"{img_save_path}/0.png"[3:],
+        'image': f"{img_save_path}/0.jpg"[3:],
         'success': None
     }
     for i, skill in enumerate(skill_sequence):
-        file_name = f"{img_save_path}/{i+1}.png"
+        file_name = f"{img_save_path}/{i+1}.jpg"
         suc = skill_manager.execute_skill(skill)
         render_img(skill_manager.env, skill_manager.env.current_state, file_name)
         transitions[str(i+1)] = {
@@ -613,5 +613,5 @@ def render_img(env: RobotouilleEnv, state: State, file_name=None):
     if file_name:
         plt.savefig(file_name)
     else:
-        plt.savefig("my_plot.png")
+        plt.savefig("my_plot.jpg")
     return fig
