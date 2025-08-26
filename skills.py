@@ -279,12 +279,16 @@ def run_skill_sequence_and_record(skill_manager: SkillManager, skill_sequence: l
     if not os.path.exists(img_save_path):
         os.makedirs(img_save_path)
     
+    # Init state
     transitions = {}
+    file_name = f"{img_save_path}/0.jpg"
+    render_img(skill_manager.env, skill_manager.env.current_state, file_name)
     transitions[str(0)] = {
         'skill': None,
-        'image': f"{img_save_path}/0.jpg"[3:],
+        'image': file_name[3:],
         'success': None
     }
+    # After each skill execution
     for i, skill in enumerate(skill_sequence):
         file_name = f"{img_save_path}/{i+1}.jpg"
         suc = skill_manager.execute_skill(skill)
