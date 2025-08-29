@@ -244,15 +244,19 @@ class SkillManager:
                     return True
         assert False, "Precondition missed edge cases"
 
-    def execute_skill(self, skill: str):
+    def execute_skill(self, skill):
         """
         Ground a skill string into actual functions for execution.
         E.g., "Pick(item1)" will be executed as self.Pick(args=("item1",))
         """
-        # separate the skill name from the arguments
-        skill, args = skill.split("(")
-        args = args[:-1] # remove the closing parenthesis
-        args = tuple([arg.strip().lower() for arg in args.split(',')])
+        if type(skill) is str:
+            # separate the skill name from the arguments
+            skill, args = skill.split("(")
+            args = args[:-1] # remove the closing parenthesis
+            args = tuple([arg.strip().lower() for arg in args.split(',')])
+        else: # Skill type
+            args = skill.args
+            skill = skill.name
 
         # execute the skill
         if skill == "Pick":
@@ -268,9 +272,10 @@ class SkillManager:
         else:
             assert False, f"Unknown skill: {skill}"
 
-def run_skill_sequence_and_record(skill_manager: SkillManager, skill_sequence: list[str], save_path: str):
+def run_skill_sequence_and_record(skill_manager: SkillManager, skill_sequence, save_path: str):
     """
     Run a skill sequence.
+    skill_sequence: list[Skill]
     """
     # Use current time as save path
     time_now = datetime.datetime.now()
@@ -307,6 +312,8 @@ def run_skill_sequence_and_record(skill_manager: SkillManager, skill_sequence: l
         task_log = {}
     task_log[dir_name] = transitions
     save_to_file(task_log, task_log_fpath)
+
+    return file_name
         
 
 # Rendering function

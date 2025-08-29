@@ -83,7 +83,7 @@ def create_robotouille_env(problem_filename, seed=None, noisy_randomization=Fals
     config_filename = "robotouille_config.json"
     problem_string, environment_json = builder.build_problem(environment_json) # IDs objects in environment
     renderer = RobotouilleRenderer(config_filename=config_filename, layout=layout, tiling=tiling, players=environment_json["players"])
-    domain_filename = "domain/robotouille.json"
+    domain_filename = "robotouille/domain/robotouille.json"
     with open(domain_filename, "r") as domain_file:
         domain_json = json.load(domain_file)
     env = RobotouilleEnv(domain_json, environment_json, renderer)
