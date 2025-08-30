@@ -3,7 +3,7 @@ import pygame
 import numpy as np
 from copy import deepcopy
 
-from utils.robotouille_utils import trim_item_ID
+from robotouille.utils.robotouille_utils import trim_item_ID
 import json
 
 class RobotouilleCanvas:

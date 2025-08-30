@@ -1,5 +1,5 @@
 import pddlgym
-import utils.pddlgym_interface as pddlgym_interface
+import robotouille.utils.pddlgym_interface as pddlgym_interface
 import itertools
 import re
 import numpy as np

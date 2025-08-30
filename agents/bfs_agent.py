@@ -9,7 +9,7 @@ import pygame
 
 from copy import deepcopy
 
-from utils.robotouille_input import create_action_from_event
+from robotouille.utils.robotouille_input import create_action_from_event
 from .agent import Agent
 
 class BFSAgent(Agent):

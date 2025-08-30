@@ -5,13 +5,13 @@ import random
 import re
 import string
 
-from backend.predicate import Predicate
-from backend.object import Object
-from backend.domain import Domain
-from backend.state import State
-from environments.env_generator.builder import entity_to_entity_field, create_unique_and_combination_preds, create_combinations
-from domain.domain_builder import build_domain
-from utils.robotouille_utils import trim_item_ID
+from robotouille.backend.predicate import Predicate
+from robotouille.backend.object import Object
+from robotouille.backend.domain import Domain
+from robotouille.backend.state import State
+from robotouille.environments.env_generator.builder import entity_to_entity_field, create_unique_and_combination_preds, create_combinations
+from robotouille.domain.domain_builder import build_domain
+from robotouille.utils.robotouille_utils import trim_item_ID
     
 def build_identity_predicates(domain_dict, environment_dict, entity_fields):
     """

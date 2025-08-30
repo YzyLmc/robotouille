@@ -1,5 +1,5 @@
-import utils.robotouille_exceptions as robotouille_exceptions
-import utils.pddlgym_interface as pddlgym_interface
+import robotouille.utils.robotouille_exceptions as robotouille_exceptions
+import robotouille.utils.pddlgym_interface as pddlgym_interface
 
 def print_states(obs):
     """

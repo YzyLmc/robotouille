@@ -1,6 +1,6 @@
-from backend.predicate import Predicate
-from backend.object import Object
-from utils.robotouille_utils import trim_item_ID
+from robotouille.backend.predicate import Predicate
+from robotouille.backend.object import Object
+from robotouille.utils.robotouille_utils import trim_item_ID
 import itertools
 import copy
 

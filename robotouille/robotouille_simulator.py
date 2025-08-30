@@ -6,8 +6,8 @@ import random
 
 from agents import NAME_TO_AGENT
 
-from utils.video_recorder import record_video
-from robotouille.robotouille_env import create_robotouille_env
+from robotouille.utils.video_recorder import record_video
+from robotouille.robotouille.robotouille_env import create_robotouille_env
 
 # Deprecated - Use run_robotouille instead
 def simulator(environment_name: str, seed: int=42, noisy_randomization: bool=False):

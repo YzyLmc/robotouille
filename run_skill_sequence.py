@@ -1,12 +1,13 @@
+"Can no longer run as is. Only be imported and used by other scripts outside robotouille/."
 import sys
 import argparse
 
 import hydra
 from omegaconf import DictConfig, OmegaConf
 
-from robotouille.robotouille_env import create_robotouille_env
+from robotouille.robotouille.robotouille_env import create_robotouille_env
 from skills import SkillManager, run_skill_sequence_and_record
-from utils.helper_functions import save_to_file, load_from_file
+from robotouille.utils.helper_functions import save_to_file, load_from_file
 
 def exec_and_record(environment_name: str, skill_sequence, save_path, **kwargs):
     '''Minimal script for testing action rollout and screen shot'''
@@ -32,7 +33,7 @@ def main(cfg: DictConfig) -> None:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--skill_sequence_fpath", type=str, default="test_tasks/burger_1.json", help="Path to the skill sequence YAML file.")
+    parser.add_argument("--skill_sequence_fpath", type=str, default="test_tasks/burger_3.json", help="Path to the skill sequence YAML file.")
     parser.add_argument("--save_path", type=str, default="test_tasks/burger/", help="Path to save the execution results.")
     args = parser.parse_args()
 

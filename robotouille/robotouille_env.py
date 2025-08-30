@@ -1,9 +1,9 @@
-import utils.pddlgym_interface as pddlgym_interface
-from renderer.renderer import RobotouilleRenderer
-from utils.robotouille_wrapper import RobotouilleWrapper
-from environments.env_generator import builder
-from environments.env_generator import procedural_generator
-from robotouille.env import RobotouilleEnv
+import robotouille.utils.pddlgym_interface as pddlgym_interface
+from robotouille.renderer.renderer import RobotouilleRenderer
+from robotouille.utils.robotouille_wrapper import RobotouilleWrapper
+from robotouille.environments.env_generator import builder
+from robotouille.environments.env_generator import procedural_generator
+from robotouille.robotouille.env import RobotouilleEnv
 import json
 
 def _parse_renderer_layout(environment_json):

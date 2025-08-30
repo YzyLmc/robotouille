@@ -2,7 +2,7 @@ import pddlgym
 import os
 import shutil
 import numpy as np
-from utils.robotouille_exceptions import RobotouilleEnvironmentDoesNotExistException
+from robotouille.utils.robotouille_exceptions import RobotouilleEnvironmentDoesNotExistException
 import environments
 
 ENVIRONMENT_DIR_PATH = os.path.dirname(os.path.abspath(environments.__file__))

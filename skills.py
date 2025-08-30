@@ -11,10 +11,10 @@ import string
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 
-from robotouille.env import RobotouilleEnv
+from robotouille.robotouille.env import RobotouilleEnv
 from backend.object import Object
 from backend.state import State
-from utils.helper_functions import save_to_file, load_from_file
+from robotouille.utils.helper_functions import save_to_file, load_from_file
 
 class SkillManager:
     """
@@ -90,10 +90,10 @@ class SkillManager:
         """
         item_name: str = args[0]
         item: Object = [i for i in self.objects if item_name in i.name][0]
+        if self.held_item: # Already holding an item
+            return False
         # If the object is not on top of the stack, the skill will fail
         if self.stack_number[item] < max([self.stack_number[o] for o in self.stack_number if self.item_station[o] == self.item_station[item]]): # Stack number less than the highest one on the stack
-            return False
-        if self.held_item: # Already holding an item
             return False
         
         if not self._goto(item):
@@ -119,7 +119,7 @@ class SkillManager:
         item_name, station_name = args
         item: Object = [i for i in self.objects if item_name in i.name][0]
         station: Object = [s for s in self.objects if station_name in s.name][0]
-        if [i for i in self.item_station if station_name == self.item_station[i].name]: # The station is not empty
+        if [i for i in self.item_station if station_name in self.item_station[i].name]: # The station is not empty
             return False
         if not self.held_item: # No item is not being held
             return False
@@ -255,9 +255,11 @@ class SkillManager:
             args = args[:-1] # remove the closing parenthesis
             args = tuple([arg.strip().lower() for arg in args.split(',')])
         else: # Skill type
-            args = skill.args
+            args = skill.params
             skill = skill.name
-
+        # change to lowercase
+        args = tuple([arg.lower() for arg in args])
+        
         # execute the skill
         if skill == "Pick":
             return self.Pick(args)
@@ -312,7 +314,7 @@ def run_skill_sequence_and_record(skill_manager: SkillManager, skill_sequence, s
         task_log = {}
     task_log[dir_name] = transitions
     save_to_file(task_log, task_log_fpath)
-
+    
     return file_name
         
 
@@ -625,4 +627,5 @@ def render_img(env: RobotouilleEnv, state: State, file_name=None):
         plt.savefig(file_name)
     else:
         plt.savefig("my_plot.jpg")
-    return fig
+    plt.close('all')
+    # return fig
