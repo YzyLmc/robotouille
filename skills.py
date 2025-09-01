@@ -107,7 +107,7 @@ class SkillManager:
                     self.env.step([a])
                     self.stack_number, self.item_station, self.held_item = self.calculate_item_stack()
                     return True
-        assert False, "Precondition missed edge cases"
+        assert False, f"Precondition missed edge cases: {args}"
     
     def Place(self, args: tuple[str]):
         """
@@ -137,7 +137,7 @@ class SkillManager:
                     self.env.step([a])
                     self.stack_number, self.item_station, self.held_item = self.calculate_item_stack()
                     return True
-        assert False, "Precondition missed edge cases"
+        assert False, f"Precondition missed edge cases: {args}"
     
     def Stack(self, args: tuple[str]):
         """
@@ -149,11 +149,11 @@ class SkillManager:
         item1_name, item2_name = args
         item1: Object = [i for i in self.objects if item1_name in i.name][0]
         item2: Object = [i for i in self.objects if item2_name in i.name][0]
-        if self.stack_number[item2] < max([self.stack_number[o] for o in self.stack_number if self.item_station[o] == self.item_station[item2]]): # The second item is not on top of the stack
-            return False
         if not self.held_item: # No item is not being held
             return False
         elif item1 != self.held_item: # The item is not being held by the agent
+            return False
+        if self.stack_number[item2] < max([self.stack_number[o] for o in self.stack_number if self.item_station[o] == self.item_station[item2]]): # The second item is not on top of the stack
             return False
 
         if not self._goto(item2):
@@ -167,7 +167,7 @@ class SkillManager:
                     self.env.step([a])
                     self.stack_number, self.item_station, self.held_item = self.calculate_item_stack()
                     return True
-        assert False, "Precondition missed edge cases"
+        assert False, f"Precondition missed edge cases: {args}"
     
     # Cut and Cook will change the object state, tracked by predicates
     def Cut(self, args: tuple[str]):
@@ -205,7 +205,7 @@ class SkillManager:
                 if item == a[1]["i1"]:
                     for _ in range(3):self.env.step([a]) # You somehow have to cut it three times
                     return True
-        assert False, "Precondition missed edge cases"
+        assert False, f"Precondition missed edge cases: {args}"
 
     def Cook(self, args: tuple[str]):
         """
@@ -242,7 +242,7 @@ class SkillManager:
                     wait = [a for a in self.env.current_state.get_valid_actions_and_str()[0] if a[0].name == "wait"][0]
                     for _ in range(3): self.env.step([wait])
                     return True
-        assert False, "Precondition missed edge cases"
+        assert False, f"Precondition missed edge cases: {args}"
 
     def execute_skill(self, skill):
         """
@@ -281,7 +281,7 @@ def run_skill_sequence_and_record(skill_manager: SkillManager, skill_sequence, s
     """
     # Use current time as save path
     time_now = datetime.datetime.now()
-    dir_name = str(time_now.year) + "-" + str(time_now.month) + "-" + str(time_now.day) + "-" + str(time_now.hour) + "-" + str(time_now.minute)
+    dir_name = str(time_now.year) + "-" + str(time_now.month) + "-" + str(time_now.day) + "-" + str(time_now.hour) + "-" + str(time_now.minute) + "-" + str(time_now.second)
     img_save_path = save_path + dir_name
     if not os.path.exists(img_save_path):
         os.makedirs(img_save_path)
