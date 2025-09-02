@@ -7,7 +7,8 @@ from .object_enums import Item, Player, Station, Container, Meal, str_to_typed_e
 from .procedural_generator import randomize_environment
 import random
 
-EXAMPLES_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)), "examples")
+# EXAMPLES_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)), "examples")
+EXAMPLES_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)), "../../../evaluation/data/burger/")
 PROBLEM_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)), "..", "robotouille")
 
 STATION_FIELD = "stations"
