@@ -431,6 +431,7 @@ def render_img(env: RobotouilleEnv, state: State, file_name=None):
                 cut_items.append(literal.params[0].name)
 
         # Plot grill, cutting board
+        img_size = (0.7, 0.7)
         for i, row in enumerate(layout):
             for j, col in enumerate(row):
                 if col is not None:
