@@ -39,7 +39,7 @@ class SkillManager:
         for literal, is_true in state.predicates.items():
             if is_true and literal.name == "item_on": # On top of a station
                 item = literal.params[0]
-                stack_number[item] = 1
+                stack_number[item] = 0
                 item_station[item] = literal.params[1]
             if is_true and literal.name == 'atop': # On top of an item
                 stack = (literal.params[0], literal.params[1])
@@ -98,7 +98,7 @@ class SkillManager:
         
         if not self._goto(item):
             return False
-        action_str = "pick-up-item"
+        action_str = "pick-up-item" if self.stack_number[item] == 0 else "unstack"
         valid_action, _ = self.env.current_state.get_valid_actions_and_str()
         valid_action = [a for a in valid_action if action_str in a[0].name]
         if valid_action:
