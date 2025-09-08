@@ -181,8 +181,8 @@ class SkillManager:
         """
         item_name: str = args[0]
         item: Object = [i for i in self.objects if item_name in i.name][0]
-        if self.held_item: # If the item is being held
-            if item == self.held_item: return False
+        if self.held_item: # If any item is being held
+            return False
         if self.stack_number[item] < max([self.stack_number[o] for o in self.stack_number if self.item_station[o] == self.item_station[item]]): # Stack number less than the highest one on the stack
             return False
         if self.held_item: # Already holding an item
@@ -217,8 +217,8 @@ class SkillManager:
         """
         item_name: str = args[0]
         item: Object = [i for i in self.objects if item_name in i.name][0]
-        if self.held_item: # If the item is being held
-            if item == self.held_item: return False
+        if self.held_item: # If any item is being held
+            return False
         if self.stack_number[item] < max([self.stack_number[o] for o in self.stack_number if self.item_station[o] == self.item_station[item]]): # Stack number less than the highest one on the stack
             return False
         if "stove" not in self.item_station[item].name: # The item is not on top of the cuttingboard
@@ -258,8 +258,8 @@ class SkillManager:
             args = skill.params
             skill = skill.name
         # change to lowercase
-        args = tuple([arg.lower() for arg in args])
-        
+        args = tuple([arg.lower()  if arg.lower() != "cuttingboard" else "board" for arg in args]) # ugly hack for cuttingboard
+
         # execute the skill
         if skill == "Pick":
             return self.Pick(args)
