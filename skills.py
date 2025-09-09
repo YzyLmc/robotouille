@@ -282,7 +282,7 @@ def run_skill_sequence_and_record(skill_manager: SkillManager, skill_sequence, s
     # Use current time as save path
     time_now = datetime.datetime.now()
     dir_name = str(time_now.year) + "-" + str(time_now.month) + "-" + str(time_now.day) + "-" + str(time_now.hour) + "-" + str(time_now.minute) + "-" + str(time_now.second)
-    img_save_path = save_path + dir_name
+    img_save_path = f"{save_path}/{dir_name}"
     if not os.path.exists(img_save_path):
         os.makedirs(img_save_path)
     
@@ -292,7 +292,7 @@ def run_skill_sequence_and_record(skill_manager: SkillManager, skill_sequence, s
     render_img(skill_manager.env, skill_manager.env.current_state, file_name)
     transitions[str(0)] = {
         'skill': None,
-        'image': file_name[3:],
+        'image': file_name,
         'success': None
     }
     # After each skill execution
@@ -302,7 +302,7 @@ def run_skill_sequence_and_record(skill_manager: SkillManager, skill_sequence, s
         render_img(skill_manager.env, skill_manager.env.current_state, file_name)
         transitions[str(i+1)] = {
             'skill': skill,
-            'image': file_name[3:], # remove ../
+            'image': file_name,
             'success': suc
         }
     
