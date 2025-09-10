@@ -16,6 +16,8 @@ from backend.object import Object
 from backend.state import State
 from robotouille.utils.helper_functions import save_to_file, load_from_file
 
+from src.data_structure import Predicate, PredicateState
+
 class SkillManager:
     """
     Take in a robotouille env, record the items and their locations (stack order) in the environment.
@@ -274,7 +276,7 @@ class SkillManager:
         else:
             assert False, f"Unknown skill: {skill}"
 
-def run_skill_sequence_and_record(skill_manager: SkillManager, skill_sequence, save_path: str):
+def run_skill_sequence_and_record(skill_manager: SkillManager, skill_sequence, save_path: str, oracle_state: bool = False):
     """
     Run a skill sequence.
     skill_sequence: list[Skill]
@@ -295,6 +297,12 @@ def run_skill_sequence_and_record(skill_manager: SkillManager, skill_sequence, s
         'image': file_name,
         'success': None
     }
+
+    if oracle_state:
+        grounded_predicate_truth_value_log = {
+            dir_name:{0: env_state_to_pred_state(skill_manager.env)}
+            }
+
     # After each skill execution
     for i, skill in enumerate(skill_sequence):
         file_name = f"{img_save_path}/{i+1}.jpg"
@@ -305,7 +313,10 @@ def run_skill_sequence_and_record(skill_manager: SkillManager, skill_sequence, s
             'image': file_name,
             'success': suc
         }
-    
+
+        if oracle_state:
+            grounded_predicate_truth_value_log[dir_name][i+1] = env_state_to_pred_state(skill_manager.env)
+
     # if log file exists, merge new data
     task_log_fpath = save_path + "/tasks.yaml"
     if os.path.exists(task_log_fpath):
@@ -314,9 +325,102 @@ def run_skill_sequence_and_record(skill_manager: SkillManager, skill_sequence, s
         task_log = {}
     task_log[dir_name] = transitions
     save_to_file(task_log, task_log_fpath)
+
+    if oracle_state:
+        grounded_predicate_truth_value_log_fpath = save_path + "/grounded_predicate_truth_value_log.yaml"
+        if os.path.exists(grounded_predicate_truth_value_log_fpath):
+            grounded_predicate_truth_value_log_all = load_from_file(grounded_predicate_truth_value_log_fpath)
+            grounded_predicate_truth_value_log_all.update(grounded_predicate_truth_value_log)
+        else:
+            grounded_predicate_truth_value_log_all = grounded_predicate_truth_value_log
+
+        save_to_file(grounded_predicate_truth_value_log_all, grounded_predicate_truth_value_log_fpath)
     
     return file_name
-        
+
+# get abstract state with oracle predicates
+def env_state_to_pred_state(env) -> PredicateState:
+    """
+    Save a predicate state in env.current_state using predicates in data structure.
+    
+    Parameters
+    ----------
+    env : robotouille.Environment
+        The environment object containing the current state.
+    """
+    state = env.current_state
+    pred_state = PredicateState([])
+    # NOTE: We might need bread onion tomato chicken and patato later.
+    bad_preds = ["istable", "isfryer", "issink", "isbread", "isonion", "istomato", "ischicken", "ispotato", "isfryable", "isfryableifcut", "isfried", "iscooking", "ispot", "isbowl", "iswater", "isboiling", "loc", "container_empty", "vacant", "has_container", "in", "addedto",  "container_at"]
+    type_dict = {"item": "pickupable", "station": "station", "player": "robot"}
+    obj_dict = {"patty": "Patty", "lettuce": "Lettuce", "topbun": "TopBun", "bottombun": "BottomBun", "board": "CuttingBoard", "stove": "Stove", "robot": "Robot"}
+    for literal, is_true in state.predicates.items():
+            if literal.name not in bad_preds:
+                name = literal.name
+                params = [p.name for p in literal.params]
+                if any(["table" in p for p in params]):
+                    continue
+                renamed_params = []
+                for p in params: # ugly hack
+                    for k in obj_dict:
+                        if k in p.lower():
+                            renamed_params.append(obj_dict[k])
+                        
+                types = [type_dict[t] for t in literal.types]
+                language_descriptors = literal.language_descriptors
+                assert len(types) == len(language_descriptors)
+                grounded_language_descriptors = []
+                for idx, sem in language_descriptors.items():
+                    for k in language_descriptors:
+                        placeholder = "{" + k + "}"
+                        sem = sem.replace(placeholder, f"args{int(k)+1}(`{types[int(k)]}`)")
+                    grounded_language_descriptors.append(sem)
+                semantic = ", and ".join(grounded_language_descriptors)
+                grounded_pred = Predicate(name=name, params=renamed_params, types=types, semantic=semantic)
+                pred_state.pred_dict[grounded_pred] = is_true
+
+    return pred_state
+
+def create_lifted_pred_list_from_env(env, save_fpath) -> list[Predicate]:
+    """
+    Create a list of lifted predicates from the environment's current state and save it to a file.
+    
+    Parameters
+    ----------
+    env : robotouille.Environment
+        The environment object containing the current state.
+    save_fpath : str
+        The file path where the lifted predicate list will be saved.
+    
+    Returns
+    -------
+    list[Predicate]
+        A list of lifted predicates.
+    """
+    state = env.current_state
+    lifted_pred_list = []
+    # NOTE: We might need bread onion tomato chicken and patato later.
+    bad_preds = ["istable", "isfryer", "issink", "isbread", "isonion", "istomato", "ischicken", "ispotato", "isfryable", "isfryableifcut", "isfried", "iscooking", "ispot", "isbowl", "iswater", "isboiling", "loc", "container_empty", "vacant", "has_container", "in", "addedto",  "container_at"]
+    type_dict = {"item": "pickupable", "station": "location", "player": "robot"}
+    for literal, is_true in state.predicates.items():
+            if literal.name not in bad_preds:
+                name = literal.name
+                types = [type_dict[t] for t in literal.types]
+                language_descriptors = literal.language_descriptors
+                assert len(types) == len(language_descriptors)
+                grounded_language_descriptors = []
+                for idx, sem in language_descriptors.items():
+                    for k in language_descriptors:
+                        placeholder = "{" + k + "}"
+                        sem = sem.replace(placeholder, f"args{int(k)+1}(`{types[int(k)]}`)")
+                    grounded_language_descriptors.append(sem)
+                semantic = ", and ".join(grounded_language_descriptors)
+                lifted_pred = Predicate(name=name, params=[], types=types, semantic=semantic)
+                if lifted_pred not in lifted_pred_list:
+                    lifted_pred_list.append(lifted_pred)
+    os.makedirs(os.path.dirname(save_fpath), exist_ok=True)
+    save_to_file(lifted_pred_list, save_fpath)
+    return lifted_pred_list
 
 # Rendering function
 def get_env_asset_path(asset_name: str, assert_exists: bool = True) -> str:
@@ -327,6 +431,7 @@ def get_env_asset_path(asset_name: str, assert_exists: bool = True) -> str:
     if assert_exists:
         assert os.path.exists(path), f"Env asset not found: {asset_name} under {asset_dir_path}."
     return path
+
 def render_img(env: RobotouilleEnv, state: State, file_name=None):
     '''
     Rendering function separated from qt interface

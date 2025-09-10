@@ -9,7 +9,7 @@ from robotouille.robotouille.robotouille_env import create_robotouille_env
 from skills import SkillManager, run_skill_sequence_and_record
 from robotouille.utils.helper_functions import save_to_file, load_from_file
 
-def exec_and_record(environment_name: str, skill_sequence, save_path, **kwargs):
+def exec_and_record(environment_name: str, skill_sequence, save_path, oracle_state=False, **kwargs):
     '''Minimal script for testing action rollout and screen shot'''
     # Initialize environment
     seed = kwargs.get('seed', None)
@@ -20,7 +20,7 @@ def exec_and_record(environment_name: str, skill_sequence, save_path, **kwargs):
     skill_manager = SkillManager(env)
     
     # Run skill sequence
-    last_img_path = run_skill_sequence_and_record(skill_manager, skill_sequence, save_path)
+    last_img_path = run_skill_sequence_and_record(skill_manager, skill_sequence, save_path, oracle_state=oracle_state)
     return last_img_path
 
 @hydra.main(version_base=None, config_path="conf", config_name="test_config")
