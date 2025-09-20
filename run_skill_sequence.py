@@ -1,6 +1,7 @@
 "Can no longer run as is. Only be imported and used by other scripts outside robotouille/."
 import sys
 import argparse
+import random
 
 import hydra
 from omegaconf import DictConfig, OmegaConf
@@ -13,6 +14,7 @@ def exec_and_record(environment_name: str, skill_sequence, save_path, oracle_sta
     '''Minimal script for testing action rollout and screen shot'''
     # Initialize environment
     seed = kwargs.get('seed', None)
+    environment_name += f"_{random.randint(0, 3)}"
     env = create_robotouille_env(environment_name, seed)
     obs, info = env.reset()
 

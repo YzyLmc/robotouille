@@ -185,7 +185,7 @@ class SkillManager:
         item: Object = [i for i in self.objects if item_name in i.name][0]
         if self.held_item: # If any item is being held
             return False
-        if self.stack_number[item] < max([self.stack_number[o] for o in self.stack_number if self.item_station[o] == self.item_station[item]]): # Stack number less than the highest one on the stack
+        if max([self.stack_number[o] for o in self.stack_number if self.item_station[o] == self.item_station[item]]) > 0: # More than 1 item on the stack
             return False
         if self.held_item: # Already holding an item
             return False
@@ -193,6 +193,11 @@ class SkillManager:
             return False
         # The item is not cuttable
         for literal, is_true in self.env.current_state.predicates.items():
+
+            if literal.name == "iscut" and literal.params[0] == item: # cannot cut it again
+                if is_true:
+                    return False
+                
             if literal.params[0] == item and literal.name == "iscuttable":
                 if not is_true:
                     return False
@@ -221,12 +226,17 @@ class SkillManager:
         item: Object = [i for i in self.objects if item_name in i.name][0]
         if self.held_item: # If any item is being held
             return False
-        if self.stack_number[item] < max([self.stack_number[o] for o in self.stack_number if self.item_station[o] == self.item_station[item]]): # Stack number less than the highest one on the stack
+        if max([self.stack_number[o] for o in self.stack_number if self.item_station[o] == self.item_station[item]]) > 0: # More than 1 item on the stack
             return False
         if "stove" not in self.item_station[item].name: # The item is not on top of the cuttingboard
             return False
         # The item is not cookable
         for literal, is_true in self.env.current_state.predicates.items():
+
+            if literal.name == "iscooked" and literal.params[0] == item: # cannot cook it again
+                if is_true:
+                    return False
+                
             if literal.params[0] == item and literal.name == "iscookable":
                 if not is_true:
                     return False
@@ -256,12 +266,14 @@ class SkillManager:
             skill, args = skill.split("(")
             args = args[:-1] # remove the closing parenthesis
             args = tuple([arg.strip().lower() for arg in args.split(',')])
+            args = args[1:] # remove robot
         else: # Skill type
             args = skill.params
             skill = skill.name
         # change to lowercase
         args = tuple([arg.lower()  if arg.lower() != "cuttingboard" else "board" for arg in args]) # ugly hack for cuttingboard
-
+        args = args[1:] # remove robot
+        
         # execute the skill
         if skill == "Pick":
             return self.Pick(args)
@@ -351,7 +363,7 @@ def env_state_to_pred_state(env) -> PredicateState:
     state = env.current_state
     pred_state = PredicateState([])
     # NOTE: We might need bread onion tomato chicken and patato later.
-    bad_preds = ["istable", "isfryer", "issink", "isbread", "isonion", "istomato", "ischicken", "ispotato", "isfryable", "isfryableifcut", "isfried", "iscooking", "ispot", "isbowl", "iswater", "isboiling", "loc", "container_empty", "vacant", "has_container", "in", "addedto",  "container_at"]
+    bad_preds = ["item_at", "ischeese", "isstove", "isboard", "isrobot", "istopbun", "isbottombun", "islettuce", "ispatty", "iscookable", "iscuttable", "istable", "isfryer", "issink", "isbread", "isonion", "istomato", "ischicken", "ispotato", "isfryable", "isfryableifcut", "isfried", "iscooking", "ispot", "isbowl", "iswater", "isboiling", "loc", "container_empty", "vacant", "has_container", "in", "addedto",  "container_at"]
     type_dict = {"item": "pickupable", "station": "station", "player": "robot"}
     obj_dict = {"patty": "Patty", "lettuce": "Lettuce", "topbun": "TopBun", "bottombun": "BottomBun", "board": "CuttingBoard", "stove": "Stove", "robot": "Robot"}
     for literal, is_true in state.predicates.items():
@@ -599,7 +611,7 @@ def render_img(env: RobotouilleEnv, state: State, file_name=None):
                                 alpha=0.5,
                                 boxstyle="square,pad=0.0"))
 
-            # Calculate item stacks
+        # Calculate item stacks
         stack_list = [] # In the form (x, y) such that x is stacked on y
         stack_number = {} # Stores the item item and current stack number
         item_station = {}
@@ -615,8 +627,9 @@ def render_img(env: RobotouilleEnv, state: State, file_name=None):
 
                 extent = [
                     x + (1 - img_size[0]) * (1 / 2),
-                    x + (1 + img_size[0]) * (1 / 2), y + (1 - img_size[1]) / 2,
-                    y + (1 + img_size[1]) / 2
+                    x + (1 + img_size[0]) * (1 / 2), 
+                    y + (1 - img_size[1]) / 2 - 0.1,
+                    y + (1 + img_size[1]) / 2 - 0.1
                 ]
                 
                 img = get_item_from_name(item_name)
@@ -641,12 +654,12 @@ def render_img(env: RobotouilleEnv, state: State, file_name=None):
                             station_pos = env.renderer.canvas._get_station_position(item_station[item_below])
                             x, y = station_pos[0], station_pos[1]
                             x, y = x, num_rows - y - 1
-                            offset = 0.1 * stack_number[item_above]
+                            offset = 0.13 * stack_number[item_above]
                             extent = [
                                 x + (1 - img_size[0]) * (1 / 2),
                                 x + (1 + img_size[0]) * (1 / 2),
-                                y + (1 - img_size[1]) / 2 + offset,
-                                y + (1 + img_size[1]) / 2 + offset
+                                y + (1 - img_size[1]) / 2 + offset - 0.1,
+                                y + (1 + img_size[1]) / 2 + offset - 0.1
                             ]
                             img = get_item_from_name(item_above)
                             ax.imshow(img, extent=extent, zorder=stack_number[item_above])
@@ -659,7 +672,7 @@ def render_img(env: RobotouilleEnv, state: State, file_name=None):
         if True:
             for item_name in stack_number:
                 stack_i = {it:s for it, s in item_station.items() if s == item_station[item_name]}
-                # print(stack_i)
+
                 station_pos = env.renderer.canvas._get_station_position(item_station[item_name])
                 x, y = station_pos[0], station_pos[1]
                 x, y = x, num_rows - y - 1
@@ -681,7 +694,7 @@ def render_img(env: RobotouilleEnv, state: State, file_name=None):
                     # More than 1 item in the stack
                     else:
                         ax.text(x,
-                                y + (0.1 * stack_number[item_name]) + (1 - img_size[1]) / 2,
+                                y + (0.1 * stack_number[item_name]) + (1 - img_size[1]) / 2 - 0.25,
                                 item_name,
                                 fontsize=fontsize,
                                 color="red",
@@ -706,7 +719,7 @@ def render_img(env: RobotouilleEnv, state: State, file_name=None):
                                                 boxstyle="square,pad=0.0"))
                     else:
                         ax.text(x,
-                                y + (0.1 * stack_number[item_name]) + (1 - img_size[1]) / 2,
+                                y + (0.1 * stack_number[item_name]) + (1 - img_size[1]) / 2 - 0.25,
                                 item_name,
                                 fontsize=fontsize,
                                 color="red",
@@ -719,7 +732,7 @@ def render_img(env: RobotouilleEnv, state: State, file_name=None):
 
         # Draw background
         floor_img = mpimg.imread(
-            get_env_asset_path("imgs/floorwood.png"))
+            get_env_asset_path("imgs/floorkitchen.png"))
         for y in range(num_rows):
             for x in range(num_cols):
                 ax.imshow(floor_img, extent=[x, x + 1, y, y + 1], zorder=-1)
@@ -734,4 +747,3 @@ def render_img(env: RobotouilleEnv, state: State, file_name=None):
     else:
         plt.savefig("my_plot.jpg")
     plt.close('all')
-    # return fig
