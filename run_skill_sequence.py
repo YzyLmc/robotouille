@@ -14,7 +14,7 @@ def exec_and_record(environment_name: str, skill_sequence, save_path, oracle_sta
     '''Minimal script for testing action rollout and screen shot'''
     # Initialize environment
     seed = kwargs.get('seed', None)
-    environment_name += f"_{random.randint(0, 3)}" if not eval else ""
+    environment_name += f"_{random.randint(0, 4)}" if not eval else ""
     env = create_robotouille_env(environment_name, seed)
     obs, info = env.reset()
 
